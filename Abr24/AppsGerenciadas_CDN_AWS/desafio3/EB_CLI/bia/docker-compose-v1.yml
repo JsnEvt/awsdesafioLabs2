@@ -1,6 +1,6 @@
+name: bia
 services:
   server:
-    env_file: .env
     container_name: eb_alb_rds
     image: 905418339132.dkr.ecr.us-east-1.amazonaws.com/bia:${TAG}
     ports:
