@@ -19,8 +19,8 @@ RUN mv build client/
 
 EXPOSE 8080
 
-FROM node:21-alpine
-WORKDIR /app
-COPY --from=build /app .
+# FROM node:21-alpine
+# WORKDIR /app
+# COPY --from=build /app .
 
 CMD [ "npm", "start" ]
