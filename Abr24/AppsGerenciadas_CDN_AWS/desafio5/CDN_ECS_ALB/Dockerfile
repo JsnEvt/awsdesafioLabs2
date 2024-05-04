@@ -9,7 +9,7 @@ RUN npm install --loglevel=error
 
 COPY . .
 
-RUN REACT_APP_API_URL=http://localhost:3001 SKIP_PREFLIGHT_CHECK=true npm run build --prefix client
+RUN REACT_APP_API_URL=http://3.85.169.249 SKIP_PREFLIGHT_CHECK=true npm run build --prefix client
 
 RUN mv client/build build
 
@@ -18,9 +18,5 @@ RUN rm  -rf client/*
 RUN mv build client/
 
 EXPOSE 8080
-
-# FROM node:21-alpine
-# WORKDIR /app
-# COPY --from=build /app .
 
 CMD [ "npm", "start" ]

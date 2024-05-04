@@ -1,25 +1,27 @@
 version: "3"
 services:
-  app:
+  server:
     build: .
     container_name: bia_cont
     ports:
       - 80:8080
+    links:
+      - database
     environment:
       DB_USER: postgres
       DB_PWD: oViZSCOVb0eTnDkzZ1ee
       DB_HOST: biadbnv.ch6siu6ymoyq.us-east-1.rds.amazonaws.com
       DB_PORT: 5432
-
-  wordpress:
-    image: wordpress
-    restart: always
-    ports:
-      - 90:9090
+  database:
+    image: postgres:16.1
+    container_name: database
     environment:
-      WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: exampleuser
-      WORDPRESS_DB_PASSWORD: examplepass
-      WORDPRESS_DB_NAME: exampledb
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_PASSWORD=postgres"
+      - "POSTGRES_DB=bia"
+    ports:
+      - 5433:5432
     volumes:
-      - wordpress:/var/www/html
+      - db:/var/lib/postgresql/data
+volumes:
+  db:
