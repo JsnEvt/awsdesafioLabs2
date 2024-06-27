@@ -5,23 +5,24 @@ services:
     container_name: bia_cont
     ports:
       - 80:8080
-    links:
-      - database
+    # links:
+    #   - database
     environment:
       DB_USER: postgres
       DB_PWD: oViZSCOVb0eTnDkzZ1ee
       DB_HOST: biadbnv.ch6siu6ymoyq.us-east-1.rds.amazonaws.com
       DB_PORT: 5432
-  database:
-    image: postgres:16.1
-    container_name: database
-    environment:
-      - "POSTGRES_USER=postgres"
-      - "POSTGRES_PASSWORD=postgres"
-      - "POSTGRES_DB=bia"
-    ports:
-      - 5433:5432
-    volumes:
-      - db:/var/lib/postgresql/data
-volumes:
-  db:
+
+#   database:
+#     image: postgres:16.1
+#     container_name: database
+#     environment:
+#       - "POSTGRES_USER=postgres"
+#       - "POSTGRES_PASSWORD=postgres"
+#       - "POSTGRES_DB=bia"
+#     ports:
+#       - 5433:5432
+#     volumes:
+#       - db:/var/lib/postgresql/data
+# volumes:
+#   db:
