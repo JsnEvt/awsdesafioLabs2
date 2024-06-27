@@ -20,7 +20,7 @@ const Header = ({ title, onAdd, showAdd }) => {
 };
 
 Header.defaultProps = {
-  title: "BIA 2024 Desafio 4 - CDN + ALB 04/05/24",
+  title: "BIA 2024 Desafio 4 - ELASTIC BEANSTALK + CDN + BANCO 01/05/24 - Finalizado!!",
 };
 
 export default Header;

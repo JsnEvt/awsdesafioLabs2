@@ -1,4 +1,4 @@
-# API_ENDPOINT=https://d2rua4ynf90k8l.cloudfront.net
+API_ENDPOINT=https://d2rua4ynf90k8l.cloudfront.net
 REACT_APP_API_URL=$API_ENDPOINT SKIP_PREFLIGHT_CHECK=true npm run build --prefix client
 echo '>> Fazendo deploy dos assets'
 aws s3 sync client/build s3://bucketbiacdn --exclude "index.html" --profile jason
