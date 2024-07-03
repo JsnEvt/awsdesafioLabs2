@@ -8,16 +8,17 @@ services:
     links:
       - database
     environment:
-      # DB_USER: postgres
+      DB_USER: postgres
       # DB_PWD: '[e<WrZ*y8vl>PU0gyTMZa<k$5fu}'
+      DB_PWD: rds-bia-pwd
       DB_HOST: biadbnv.ch6siu6ymoyq.us-east-1.rds.amazonaws.com
       DB_PORT: 5432
       ## NAO PRECISA NO BOOTCAMP DAQUI PRA BAIXO ##
-      DB_SECRET_NAME: rds!db-1f79395a-f557-470b-b647-5173dcf3310f
-      DB_REGION: us-east-1
+      # DB_SECRET_NAME: rds!db-1f79395a-f557-470b-b647-5173dcf3310f
+      # DB_REGION: us-east-1
       # AWS_ACCESS_KEY_ID: 
       # AWS_SECRET_ACCESS_KEY:
-      DEBUG_SECRET: true
+      # DEBUG_SECRET: true
       # IS_LOCAL: true      
   database:
     image: postgres:16.1
