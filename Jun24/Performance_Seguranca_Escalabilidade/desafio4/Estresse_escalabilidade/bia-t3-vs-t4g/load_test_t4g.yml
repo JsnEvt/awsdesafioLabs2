@@ -1,0 +1,11 @@
+config:
+  target: http://alb-t4g-1542172932.us-east-1.elb.amazonaws.com
+  phases:
+    - duration: 300
+      arrivalRate: 100
+      rampTo: 200
+      name: Ramp up load
+scenarios:
+ - flow:
+      - get:
+          url: "/api/loadTest?n=25"
