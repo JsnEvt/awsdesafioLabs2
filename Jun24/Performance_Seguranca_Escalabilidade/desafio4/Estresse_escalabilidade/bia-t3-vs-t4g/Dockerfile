@@ -9,13 +9,13 @@ RUN npm install --loglevel=error
 
 COPY . .
 
-#RUN REACT_APP_API_URL=http://localhost:3001 SKIP_PREFLIGHT_CHECK=true npm run build --prefix client
+RUN REACT_APP_API_URL=http://clst-escalabilidade-835207033.us-east-1.elb.amazonaws.com SKIP_PREFLIGHT_CHECK=true npm run build --prefix client
 
-#RUN mv client/build build
+RUN mv client/build build
 
-#RUN rm  -rf client/*
+RUN rm  -rf client/*
 
-#RUN mv build client/
+RUN mv build client/
 
 EXPOSE 8080
 

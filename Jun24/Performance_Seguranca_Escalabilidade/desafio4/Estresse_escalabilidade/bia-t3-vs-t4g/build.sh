@@ -1,6 +1,5 @@
-ECR_REGISTRY=""
+ECR_REGISTRY="905418339132.dkr.ecr.us-east-1.amazonaws.com"
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
-#docker build -t bia .
-docker buildx build --platform linux/amd64 -t bia:t3 .
-docker tag bia:t3 $ECR_REGISTRY/bia:t3
-docker push $ECR_REGISTRY/bia:t3
+docker build -t bia .
+docker tag bia:latest $ECR_REGISTRY/bia:latest
+docker push $ECR_REGISTRY/bia:latest

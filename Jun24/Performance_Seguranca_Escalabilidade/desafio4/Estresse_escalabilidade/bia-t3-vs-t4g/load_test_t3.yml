@@ -1,9 +1,9 @@
 config:
-  target: http://alb-t3-2109110319.us-east-1.elb.amazonaws.com
+  target: http://clst-escalabilidade-835207033.us-east-1.elb.amazonaws.com
   phases:
-    - duration: 300
+    - duration: 600
       arrivalRate: 100
-      rampTo: 200
+      rampTo: 150
       name: Ramp up load
 scenarios:
     - flow:
