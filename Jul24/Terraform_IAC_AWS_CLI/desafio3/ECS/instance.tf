@@ -13,5 +13,5 @@ resource "aws_instance" "bia_dev" {
   }
   iam_instance_profile = aws_iam_instance_profile.role_acesso_ssm_nv.name
   user_data            = file("userdata_biadev.sh")
-  key_name             = "terraform"
+  # key_name             = "" //key-pair
 }
