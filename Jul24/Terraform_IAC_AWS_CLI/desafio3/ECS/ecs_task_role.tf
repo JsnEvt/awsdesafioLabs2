@@ -17,14 +17,14 @@ data "aws_iam_policy_document" "ecs_task_role" {
 
 //SEGUNDO = DOCUMENTO QUE CONCEDE A PERMISSAO ESPECIFICA = OBTENCAO DO VALOR DA SECRET
 resource "aws_iam_policy" "get_secret_biadbnv" {
-  name        = "GetSecretbiadbnv"
+  name        = "GetSecretBiaDBnv"
   description = "Policy para recuperar a secrets da biadbnv"
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Adction = [
+        Action = [
           "secretsmanager:GetSecretValue"
         ],
         Effect   = "Allow",

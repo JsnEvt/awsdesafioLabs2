@@ -1,5 +1,5 @@
 resource "aws_iam_instance_profile" "role_acesso_ssm" {
-  name        = "role-acesso-ssm"
+  name        = "role-acesso-ssm-nv"
   name_prefix = null
   path        = "/"
   role        = null
@@ -7,7 +7,7 @@ resource "aws_iam_instance_profile" "role_acesso_ssm" {
   tags_all    = {}
 }
 
-resource "aws_iam_role" "role_acesso_ssm" {
+resource "aws_iam_role" "role_acesso_ssm_nv" {
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRole"
@@ -22,7 +22,7 @@ resource "aws_iam_role" "role_acesso_ssm" {
   force_detach_policies = false
   managed_policy_arns   = ["arn:aws:iam::aws:policy/AdministratorAccess", "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess", "arn:aws:iam::aws:policy/AmazonECS_FullAccess", "arn:aws:iam::aws:policy/AmazonS3FullAccess", "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
   max_session_duration  = 3600
-  name                  = "role-acesso-ssm"
+  name                  = "role-acesso-ssm-nv"
   name_prefix           = null
   path                  = "/"
   permissions_boundary  = null
@@ -31,6 +31,6 @@ resource "aws_iam_role" "role_acesso_ssm" {
 }
 
 resource "aws_iam_role_policy_attachment" "role_acesso_ssm_policy" {
-  role       = aws_iam_role.role_acesso_ssm.name
+  role       = aws_iam_role.role_acesso_ssm_nv.name
   policy_arn = aws_iam_policy.get_secret_biadbnv.arn
 }

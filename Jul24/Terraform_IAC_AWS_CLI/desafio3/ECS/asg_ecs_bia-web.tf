@@ -10,7 +10,7 @@ resource "aws_autoscaling_group" "ecs" {
 
   launch_template {
     id      = aws_launch_template.ecs_ec2.id
-    version = "$latest"
+    version = "$Latest"
   }
   tag {
     key                 = "Name"

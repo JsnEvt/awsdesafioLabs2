@@ -4,12 +4,12 @@ resource "aws_ecs_task_definition" "bia-web" {
   task_role_arn = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([{
-    name             = "bia",
-    image            = "${aws_ecr_repository.bia.repository_url}:latest",
-    essential        = true
-    portMappings     = [{ containerPort = 8080, hostPort = 80 }],
-    cpu              = 1024
-    memoryRservation = 400
+    name              = "bia",
+    image             = "${aws_ecr_repository.bia.repository_url}:latest",
+    essential         = true
+    portMappings      = [{ containerPort = 8080, hostPort = 0 }],
+    cpu               = 1024
+    memoryReservation = 400
     environment = [
       { name = "DB_PORT", value = "5432" },
       { name = "DB_HOST", value = "${aws_db_instance.biadbnv.address}" },
