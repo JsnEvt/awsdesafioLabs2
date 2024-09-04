@@ -124,3 +124,35 @@ resource "aws_security_group" "bia-dev" {
   tags_all               = {}
   vpc_id                 = "vpc-038a32576faa90bfb"
 }
+
+resource "aws_security_group" "bia-ec2" {
+  description = "acesso do bia-ec2"
+  egress = [{
+    cidr_blocks      = ["0.0.0.0/0"]
+    description      = ""
+    from_port        = 0
+    ipv6_cidr_blocks = []
+    prefix_list_ids  = []
+    protocol         = "-1"
+    security_groups  = []
+    self             = false
+    to_port          = 0
+  }]
+  ingress = [{
+    cidr_blocks      = []
+    description      = "acesso do bia alb"
+    from_port        = 0
+    ipv6_cidr_blocks = []
+    prefix_list_ids  = []
+    protocol         = "tcp"
+    security_groups  = ["sg-0716cf24045de3a22"]
+    self             = false
+    to_port          = 65535
+  }]
+  name                   = "bia-ec2"
+  name_prefix            = null
+  revoke_rules_on_delete = null
+  tags                   = {}
+  tags_all               = {}
+  vpc_id                 = "vpc-038a32576faa90bfb"
+}

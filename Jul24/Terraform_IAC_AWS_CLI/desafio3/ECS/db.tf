@@ -66,3 +66,12 @@ resource "aws_db_instance" "biadbnv" {
   username                              = "postgres"
   vpc_security_group_ids                = ["sg-09b26e093d784bb3d"]
 }
+
+resource "aws_db_subnet_group" "bia" {
+  name       = "bia-subnet-group"
+  subnet_ids = [local.subnet_zona_a, local.subnet_zona_b, local.subnet_zona_f]
+
+  tags = {
+    name = "bia-subnet-group"
+  }
+}

@@ -12,6 +12,11 @@ resource "aws_autoscaling_group" "ecs" {
     id      = aws_launch_template.ecs_ec2.id
     version = "$Latest"
   }
+
+  lifecycle {
+    ignore_changes = [desired_capacity]
+  }
+
   tag {
     key                 = "Name"
     value               = "cluster-bia-tf"

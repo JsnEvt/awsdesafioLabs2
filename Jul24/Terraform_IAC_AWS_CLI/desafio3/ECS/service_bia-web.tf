@@ -1,8 +1,8 @@
 resource "aws_ecs_service" "bia" {
   name            = "service-bia"
   cluster         = aws_ecs_cluster.cluster_bia.id
-  task_definition = aws_ecs_task_definition.bia-web.id
-  desired_count   = 1
+  task_definition = aws_ecs_task_definition.bia-web.arn
+  desired_count   = 2
 
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.bia.name
@@ -12,14 +12,14 @@ resource "aws_ecs_service" "bia" {
 
   ordered_placement_strategy {
     type  = "spread"
-    field = "attribute:ecs.availability_zone"
+    field = "attribute:ecs.availability-zone"
   }
-  deployment_minimum_healthy_percent = 0
+  deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 100
 
-  lifecycle {
-    ignore_changes = [desired_count]
-  }
+  # lifecycle {
+  #   ignore_changes = [desired_count]
+  # }
 
   depends_on = [aws_lb_target_group.tg-bia]
 
