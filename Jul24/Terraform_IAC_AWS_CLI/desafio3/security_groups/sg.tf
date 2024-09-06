@@ -133,7 +133,6 @@ resource "aws_security_group" "alb" {
   vpc_id                 = "vpc-038a32576faa90bfb"
 }
 
-# __generated__ by Terraform from "sg-0716cf24045de3a22"
 resource "aws_security_group" "bia-alb" {
   description = "acesso do bia alb"
   egress = [{
