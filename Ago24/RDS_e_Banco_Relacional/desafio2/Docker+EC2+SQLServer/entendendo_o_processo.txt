@@ -1,0 +1,119 @@
+Desafio 2 - RDS + Banco Relacional
+Aprender a rodar SQL Server com Docker na AWS e fazer restore de um backup no RDS	
+Sera feito atraves da console AWS
+
+LANCANDO SQL SERVER COM DOCKER NA AWS
+
+INICIANDO A ATIVIDADE:
+
+Obs. Quando usei a chave pem dentro do WSL usando o /mnt/c/... para acessar 
+o conteudo da pasta onde estava a chave para poder mudar as permissoes, o
+comando chmod nao funcionava. Ha uma restricao dentro do windows que impede
+que outros sistemas operacionais mudem as permissoes de seus arquivos.
+Sendo assim, copiei o arquivo keypair... para dentro das pastas /home/ec2-user
+por exemplo e o comando chmod funcionou corretamente.
+
+COMANDO PARA COPIAR A CHAVE PARA A RAIZ DO UBUNTU
+cp /mnt/c/path/to/keypair_sqlserver.pem ~/
+ALTERANDO AS PERMISSOES
+chmod 400 ~/keypair_sqlserver.pem
+
+
+A chave foi usada para acessar via ssh a instancia na aws.
+
+Agora faremos a conexao via tunel ssh para conectar meu computador a instancia
+ec2 na aws. A conexao sera feita a partir do terminal ubuntu dentro da minha
+maquina na pasta /home/jason
+
+COMANDO PARA CONSTRUCAO DO TUNEL
+ssh -f -N -i keypair_sqlserver.pem -L 1436:172.31.82.235:1433 ec2-user@ec2-34-239-125-253.compute-1.amazonaws.com
+
+ENTENDENDO A ESTRUTURA DA CONSTRUCAO DO TUNEL
+-f = background
+-N = criando apenas o nucleo (para nao rodar nenhum comando remoto)
+-i = para a chave pem
+-L = para redirecionamento de porta
+
+KEY_PAIR
+-L = local na porta 1436
+no outro lado ID PRIVADO DA INSTANCIA AWS operando na porta 1433
+ec2-user = usuario
+ec2-... = ENDPOINT DA INSTANCIA
+
+Verificando a criacao do tunel
+ps aux | grep ssh
+
+O tunel foi criado para que pudesse acessar o container que tem o SQL Server dentro da instancia EC2 na AWS
+
+Apos a conexao bem sucedida com o dbeaver e o banco dentro do container dentro
+da instancia na aws, deseja-se fazer o restore, porem, o banco precisaria estar local
+No caso do desafio, o banco esta na instancia e precisamos dele dentro do container do 
+SQL Server. A solucao no desafio foi copia-lo para dentro do container
+
+A copia se dara a partir da instancia ec2 na aws, usando o terminal ubuntu na minha maquina, onde operamos
+remotamente com a chave pem
+
+COPIANDO
+docker cp AdventureWorks.bak (numero_do_container):/var/opt/mssql/data
+o comando acima copia o "banco" baixado para o container docker que esta rodando lancando o conteudo na pasta /var....
+AdventureWorks = endereco do banco (foi baixado como exemplo)
+para que possa ser feito o restore
+
+Recaptulando:
+O SQL ESTA RODANDO DENTRO DO CONTAINER DOCKER, DENTRO DE UMA INSTANCIA NA AWS
+UM TUNEL FOI CRIADO PARA ACESSAR ESTE CONTAINER DENTRO DESTA INSTANCIA
+A COMPROVACAO DO ACESSO FOI VERIFICADA ATRAVES DO DBEAVER, QUE RESULTOU EM CONEXAO BEM SUCEDIDA 
+UMA COPIA DO ADVENTUREWORKS FOI FEITA PARA O CONTAINER SQL SERVER PARA PODER ACESSAR 
+ESTE CONTAINER COM A CONEXAO TUNELADA E FAZER O RESTORE PARA O DBEAVER.
+ESTAMOS OPERADO COM O DOCKER E SQL SERVER QUE ESTA RODANDO DENTRO DO DOCKER
+
+RESUMINDO:
+TEMOS O SQL SERVER RODANDO DENTRO DO CONTAINER DOCKER NA INSTANCIA EC2 NA AWS.
+UMA COPIA DO ADVENTUREWORKS FOI FEITA PARA O CONTAINER, PARA QUE A PARTIR DALI,
+PUDESSEMOS ACESSAR NO DBEAVER EM NOSSSA MAQUINA PARA PODER RESTAURAR OS DADOS CONTIDOS
+NO ADVETUREWORKS.
+
+AINDA NAO ESTAMOS TRABALHANDO COM O SQL SERVER DENTRO DO RDS
+
+----
+Durante este aprendizado, apos umas 2 horas de inatividade, a comunicacao 
+do tunel ssh foi interrompida. O processo de restauracao da mesma conexao 
+veio com os seguinte comandos:
+
+ps aux | grep ssh
+kill <PID>
+sudo kill -9 (numero)
+sudo systemctl stop ssh
+sudo systemctl stop sshd
+ps aux | grep ssh
+
+Apos estes comandos o dbeaver conseguiu se conectar
+
+----
+
+A restauracao no dbeaver ocorreu com sucesso.
+
+O Script abaixo foi rodado no dbeaver, onde:
+
+esta linha visou listar os arquivos mdf e ldf para copia-los para a instrucao mais abaixo:
+RESTORE FILELISTONLY FROM DISK = 'AdventureWorks2022.bak'
+
+nesta outra: 
+a base restaurada recebe o nome abaixo, do disco acima com a transferencia dos arquivos *.mdf e *.ldf
+para um endereco linux
+
+RESTORE DATABASE AdventureWorks
+FROM DISK = 'AdventureWorks2022.bak'
+WITH
+	MOVE 'AdventureWorks2022' TO '/var/opt/mssql/data/AdventureWorks2022.mdf',
+	MOVE 'AdventureWorks2022_log' TO '/var/opt/mssql/data/AdventureWorks2022_log.ldf'
+
+observacao:
+TO '/var/opt/mssql/data/AdventureWorks2022.mdf' indica o novo caminho no sistema de arquivos onde o arquivo de
+dados será armazenado após a restauração. No caso, /var/opt/mssql/data/ é um diretório típico no SQL Server rodando
+ em ambientes Linux (como containers ou VMs).
+
+ O ARQUIVO FOI RESTAURADO DENTRO (OBS.DENTRO DO CONTAINER) E EXIBIDO NO DBEAVER!
+ APESAR DE PARECER CONFUSO, E NECESSARIO SABER QUE A RESTAURACAO (NAO) OCORREU NA MAQUINA LOCAL, E SIM, 
+ NO CONTAINER QUE ESTA RODANDO DENTRO DA INSTANCIA NA AWS. O DBEAVER LOCAL SERVIU APENAS PARA A ESCRITA 
+ DO SCRIPT SQL E EXIBICAO DO RESULTADO.

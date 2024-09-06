@@ -1,0 +1,157 @@
+Desafio 2 - RDS + Banco Relacional
+Aprender a rodar SQL Server com Docker na AWS e fazer restore de um backup no RDS	
+Sera feito atraves da console AWS
+
+AGORA, NESTE PROCESSO SERA FEITO O TRANSPORTE DO BACKUP PARA O RDS.
+Na operacao anterior, o trabalho era apenas fazer a restauracao do arquivo de
+backup AdventureWorks2022 dentro do container que rodava em nossa instancia.
+
+A IDEIA INICIAL, JUNTAMNETE COM O PROCESSO USADO NA ETAPA ANTERIOR E:
+PEGAR O ARQUIVO ADVENTUREWORKS.BAK DA INSTANCIA EC2 E COLOCAR NO S3 PARA QUE
+DE LA, O RDS TENHA ACESSO JA QUE NAO E POSSIVEL MANIPULAR O RDS/CONTEUDO 
+DIRETAMENTE.
+
+Usaremos o SQL Server 2019
+
+Dentro da instancia ec2, no terminal ubuntu no proprio computador, executamos o 
+docker run (imagem_do_sqlserver2019) com o comando abaixo:
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=P@ssword" -p 1433:1433 -d mcr.microsoft.com/mssql/server:2019-latest
+
+Assim, a imagem do SQL Server estara rodando no container dentro da instancia EC2.
+
+Apos baixado a o arquivo de backup, no caso, AdventureWorks2019.bak, copiamos para o container
+que esta rodando o SQL Server.
+
+PROBLEMA:  - Quando retornei ao dbeaver, o teste de comunicao nao era estabelecido.
+Fui no terminal e, na tentativa de encerrar o processo, encerrei a comunicao com a EC2 da AWS acidentalmente.
+A solucao foi dar um REBOOT na instancia da AWS via console e startar novamente o servico do ssh
+dentro do terminal do ubuntu com os seguintes comandos:
+
+verficando o status:
+sudo systemctl status sshd
+sudo service ssh status
+
+startando:
+sudo systemctl start sshd
+sudo service ssh start
+
+Retornando ...
+Refazendo a conexao TUNELADA com a instancia para prosseguir:
+ssh -f -N -i keypair_sqlserver.pem -L 1436:172.31.82.235:1433 ec2-user@ec2-34-239-125-253.compute-1.amazonaws.com
+
+Copiando o AdventureWorks2019.bak para dentro do container novamente:
+docker cp AdventureWorks2019.bak 613e55d97f59:/var/opt/mssql/data
+
+Retornando ao dbeaver...
+Conexao e restauracao  - OK
+
+AGORA, RDS dentro da AWS
+
+Criamos um security group MSSQL na porta 1433 - source: ssh-sqlserver, que opera na porta 22
+exclusivamente na minha maquina
+
+Criando o database SQLServer via interface AWS
+O banco dbsqlserver foi criado
+
+E necessario criar um bucket S3 para que o banco dbsqlserver tenha acesso ao conteudo que trara para si devido 
+ao fato de que nao operamos o banco diretamente. Desta forma, o S3 servira de intermediario dos back-ups
+que serao lancados neste banco.
+
+Apos criado o bucket, surge a seguinte pergunta: De onde iremos enviar o nosso bkp?
+Da nossa instancia EC2, entao, precisa-se criar uma role para dar permissao de acesso da EC2 ao S3.
+
+Foi criado uma role com acesso completo ao S3 e anexado a instancia (de trabalho) para permitir subir 
+o bkp para o S3
+
+Agora, no RDS ativamos o OPTION GROUP (Atribui mais poder para trabalhar com o banco, fornecendo permissoes
+extras para manipulacao das informacoes/estruturas)para permitir que o banco possa acessar o S3 para fazer o 
+RESTORE dos dados do BKP. Para isso a documentacao fornece um codigo que permite essa interacao com o S3.
+
+https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/SQLServer.Procedural.Importing.html#SQLServer.Procedural.Importing.Native.Using.Restore
+
+TRUST RELATIONSHIP = CONDICAO DE CONFIANCA QUE SERA CONCEDIDA PARA O RDS
+
+Uma nova role sera criada para anexar o recurso do TRUST RELATIONSHIP ativando a opcao de CUSTOM TRUST POLICY
+para habilitar novas acoes nessa conta
+
+O TRUST POLICY DIZ - QUEM PODE
+nas permissoes e informado - O QUE ELE PODE
+
+Com a role e a policy criada, o OPTION GROUP podera assumir a role e fazer bkp ou restaurar arqivos do S3
+
+Apos a atribuicao da role ao option group, e necessario fazer a atribuicao ao banco RDS
+
+----
+
+Enviando o bkp para o S3
+
+Conectando a EC2 com o comando: 
+ssh -i "keypair.pem" ec2-user@ec2-000-000-000-000.compute-1.amazonaws.com
+
+Copiando o AdventureWorks2019 para o S3
+aws s3 cp AdventureWorks2019.bak s3://sqlserver-bkpjs/
+
+Construindo um tunel SSH para se conectar ao RDS e fazer o restore la
+O tunel e criado a partir do terinal do ubuntu no computador pessoal
+
+ssh -f -N -i keypair_sqlserver.pem -L 1437:dbsqlserver.ch6siu6ymoyq.us-east-1.rds.amazonaws.com:1433 ec2-user@ec2-34-239-125-253.compute-1.amazonaws.com
+
+ESCREVENDO O SCRIPT DENTRO DO DBEAVER PARA FAZER O RESTORE DO BANCO:
+
+exec msdb.dbo.rds_restore_database
+@restore_db_name='AdventureWorks2019',
+@s3_arn_to_restore_from='arn:aws:s3:::MY_S3_BUCKET/ARQUIVO.bak';
+
+O COMANDO ABAIXO LISTA O STATUS DO RESTORE
+exec msdb.dbo.rds_task_status @task_id=1;
+
+PARA REALIZAR O BACKUP DO BANCO EM UM ARQUIVO UNICO COM O PARAMETRO DO NUMERO DE ARQUIVOS:
+exec msdb.dbo.rds_backup_database
+@source_db_name='mydatabase',
+@s3_arn_to_backup_to='arn:aws:s3:::mybucket/backup*.bak',
+@number_of_files=1;
+
+
+SCRIPTS USADO NO DBEAVER PARA REALIZAR O RESTORE O BKP:
+
+RESTORE
+exec msdb.dbo.rds_restore_database
+@restore_db_name='AdventureWorks2019',
+@s3_arn_to_restore_from='arn:aws:s3:::sqlserver-bkpjs/AdventureWorks2019.bak';
+
+exec msdb.dbo.rds_task_status @task_id=2 ;
+
+--Apos a alteracao do nome da cidade, farei o bkp para o S3 com os comandos abaixo:
+
+BACKUP
+exec msdb.dbo.rds_backup_database
+@source_db_name='AdventureWorks2019',
+@s3_arn_to_backup_to='arn:aws:s3:::sqlserver-bkpjs/AdventureWorks2019-custom.bak',
+@number_of_files=1;
+
+APOS UM BKP ALTERADO, RESTAURAREMOS PARA O CONTAINER USANDO OS SEGUINTES COMANDOS:
+DENTRO DA INSTANCIA EC2 NO TERMINAL UBUNTU DA PROPRIA MAQUINA:
+
+Primeiro, copiar o arquivo do s3 para dentro da instancia EC2
+aws s3 cp s3://sqlserver-bkpjs/AdventureWorks2019-custom.bak .
+
+Agora, copia-se o arquivo para o container docker:
+docker cp AdventureWorks2019-custom.bak 613e55d97f59:/var/opt/mssql/data/
+
+RESTAURANDO O BKP DENTRO DO DBEAVER:
+este novo kbp tem que contemplar a alteracao feita
+
+RESTORE FILELISTONLY FROM DISK = 'AdventureWorks2019-custom.bak'
+
+RESTORE DATABASE AdventureWorks20192
+FROM DISK = 'AdventureWorks2019-custom.bak'
+WITH
+	MOVE 'AdventureWorks2019' TO '/var/opt/mssql/data/AdventureWorks2019.mdf',
+	MOVE 'AdventureWorks2019_log' TO '/var/opt/mssql/data/AdventureWorks2019_log.ldf'
+
+Obs quanto a quantidade de portas ssh que podem ser abertas simultaneamente:
+
+Em um ambiente típico com hardware moderno e uma configuração de rede padrão, você deve ser capaz de abrir 
+centenas ou até milhares de túneis SSH simultaneamente sem problemas significativos. As restrições geralmente 
+vêm de limitações específicas impostas por configurações de rede, firewall, ou do servidor SSH, e não do seu 
+computador pessoal em si.
