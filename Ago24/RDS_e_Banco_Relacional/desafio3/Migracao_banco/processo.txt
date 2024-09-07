@@ -1,0 +1,124 @@
+Desafio 3 - RDS e BANCO RELACIONAL
+RDS + AURORA + POSTGRESQL
+
+Aprenda a migrar um banco relacional em Postgresql para o RDS/Aurora via script	
+
+O banco sera SERVERLESS
+A ideia e pegar os dados do banco normal dbbianv e migrar para o banco serverless
+sera migrado a estrutura e os dados
+
+PARA O BANCO SERVERLESS, VC PAGA PELO QUE USA E, PARA O BANCO NORMAL, A COBRANCA
+E INDEPENDENTE DO USO.
+
+NA CONSOLE DA AWS, NA CRIACAO DO BANCO, USAREMOS COMPATIBILIDADE COM AURORA POSTGRESQL
+E SERVERLESS
+Nas configuracoes da criacao, selecionamos a opcao de PAUSAR APOS INATIVIDADE APOS 5 MIN.
+SECURITY GROUP DIA-DB (VERIFICAR AS REGRAS)
+
+OBS.
+PARA FAZER O PROCESSO DE MIGRACAO, E NECESSARIO ESTAR DENTRO DA AWS.
+NAO E POSSIVEL CONECTAR AO BANCO AURORA SERVERLESS DE FORA DA AWS.
+
+LANCA-SE UMA INSTANCIA PARA COMUNICACAO
+
+ESSA OPERACAO TAMBEM PERMITE A MIGRACAO DE UM BANCO DE PRODUCAO PARA HOMOLOGACAO, 
+PARA REALIZACAO DE TESTES, POR EXEMPLO.
+
+A comunicao se dara via terminal do ubuntu usando o ssh
+ssh -i "chave.pem" usuario@ec2-ip-ip-ip-ip.compute-1.amazonaws.com
+
+Dentro da instancia, atualizamos:
+sudo su
+apt-get update
+
+para instalar o CLIENT DO POSTGRESQL
+apt-get install postgresql-client -y
+
+psql --version &
+pg_isready - para verificar a instalacao
+
+Agora, precisamos acessar o banco passando as credenciais. Para nao passar as credenciais 
+na linha de comando, podemos criar um arquivos .pgpass usando o comando touch no linux
+e informando os valores dentro do arquivo. No arquivo serao passados os dados de conexao
+com o banco.
+
+SEQUENCIA:
+HOST:PORTA:NOMEDOBANCO:NOMEDOUSER:SENHA
+
+NO PROCESSO DE COPIA DOS ARQUIVOS DO BANCO RELACIONAL PARA O SERVERLESS O PROCESSO SE DARA
+DA SEGUINTE FORMA:
+
+ --- BANCO SERVERLESS
+
+ - BKP BANCO
+ - DELECAO DO BANCO DESTINO 
+    - FECHAMENTO DAS CONEXOES
+    - SAIDA DO BANCO ATUAL PARA O BANCO POSTGRES 
+      (Quando fechar as conexoes, saira do banco "bia" e se conectara ao banco Postgresql)
+      Na string de conexao com o banco, o NOMEDOUSER SERA ALTERADO DE "bia" para "postgres"
+      Permitindo a conexao com o novo usuario, ja que a conexao com "bia" foi encerrada.
+ - CRIACAO DO BANCO DESTINO
+ - RESTORE
+
+ --- BANCO ATUAL (dados coletados na task definition que estava registrada no ECS(caso haja))
+
+  String de conexao
+  - HOST:PORTA:BANCO:USER:SENHA
+
+AINDA NA INSTANCIA EC2, CRIAMOS UM OUTRO ARQUIVO CHAMADO backup_restore_bia.sh
+Comecamos editando este arquivo com string de testes de conexao.
+
+Criando as variaveis
+HOST_ORIGEM=DB_RELACIONAL_RDS
+HOST_DESTINO=DB_SERVERLESS
+USER_ORIGEM=postgres
+USER_DESTINO=postgres
+DATABASE=bia
+FILE=dump_bia.tar
+
+chmod 0600 .pgpass
+
+echo 'Testando conexao com o banco de origem'
+PGPASSFILE=.pgpass pg_isready -d $DATABASE -h $HOST_ORIGEM -p 5432 -U $USER_ORIGEM
+
+PROCESSO DE BACKUP
+echo 'Iniciando o bakcup'
+PGPASSFILE=.pgpass pg_dump -U $USER_ORIGEM -h $HOST_ORIGEM -d $DATABASE --clean --no-privileges --no-owner --verbose --file $FILE
+echo 'Backup finalizado'
+
+echo 'Testando conexao com o banco de destino'
+PGPASSFILE=.pgpass pg_isready -d $DATABASE -h $HOST_DESTINO -p 5432 -U $USER_DESTINO
+
+NAO E NECESSARIO INFORMAR A SENHA PQ JA ESTA INFORMADA NO ARQUIVO .pgpass
+
+Concedemos permissao chmod +x backup_restore_bia.sh
+
+Quando pedimos uma conexao ao banco SERVERLESS, de imediato, nao havera resposta.
+Assim, ele criara ACU(CAPACITY UNITS) que sera utilizado para processamento quando 
+a conexao for estabelecida.
+
+Fechando as conexoes com o banco de DESTINO para que possa fazer um DROP o mesmo,
+CRIAR NOVAMENTE e RESTAURA-LO.
+
+echo 'Fechando conexoes no destino'
+PGPASSFILE=.pgpass psql -d postgres -h $HOST_DESTINO -p 5432 -U #USER_DESTINO -q -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DATABASE'"
+
+echo 'Drop banco destino'
+PGPASSFILE=.pgpass dropdb -U postgres -h $HOST_DESTINO $DATABASE
+
+echo 'Create banco destino'
+PGPASSFILE=.pgpass createdb -U postgres -h $HOST_DESTINO $DATABASE
+
+echo 'Restoring'
+PGPASSFILE=.pgpass -d $DATABASE -h $HOST_DESTINO -p 5432 -U $USER_DESTINO -e -f $FILE
+echo 'Finished'
+
+Primeiramente, para-se o banco RELACIONAL NO RDS.
+
+Apos a execucao dessas instrucoes, na task definitions CRIAMOS UMA NEW REVISION para alterar
+as VARIAVEIS DE AMBIENTE do banco RELACIONAL para o SERVERLESS e ATUALIZAMOS a SERVICE 
+do ECS para ler as novas instrucoes da task definition.
+
+No target group podemos acompanhar a saude do processo
+
+Migracao concluida.
