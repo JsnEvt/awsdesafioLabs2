@@ -1,0 +1,18 @@
+o profile(user) precisa ter as premissoes para executar os comandos 
+dentro das instancias especificas
+
+Rodando o ligamento da instancia localmente:
+
+sam local invoke FUNCAO --profile x
+
+Implantando a funcao no Lambda dentro da AWS:
+
+sam deploy --guided --profile x 
+
+sam deploy --profile x
+
+Desalocando:
+
+sam delete --profile x
+
+Construindo um tunel mais simples para o tunel SSH para automatizar as funcoes lambda.
