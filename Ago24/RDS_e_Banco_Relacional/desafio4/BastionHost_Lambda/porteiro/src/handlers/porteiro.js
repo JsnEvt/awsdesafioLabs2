@@ -9,24 +9,32 @@ const AWS = require("aws-sdk");
 
 AWS.config.update({ region: "us-east-1" });
 const ec2 = new AWS.EC2({ apiVersion: "2016-11-15" });
+
 const params = {
   InstanceIds: ["i-017cfa4264fba5419"],
-}
+};
 
-export.startEC2Instances = () = {
+// Função para iniciar instâncias EC2
+function startEC2Instances() {
   return ec2.startInstances(params, function (err, data) {
-    if (err)
-      console.log(err, err.stack)
-    else
-      console.log("Porteiro ligado com sucesso")
-  })
+    if (err) {
+      console.log(err, err.stack);
+    } else {
+      console.log("Porteiro ligado com sucesso");
+    }
+  });
 }
 
-export.stopEC2Instances = () = {
+// Função para parar instâncias EC2
+function stopEC2Instances() {
   return ec2.stopInstances(params, function (err, data) {
-    if (err)
-      console.log(err, err.stack)
-    else
-      console.log("Porteiro desligado com sucesso")
-  })
+    if (err) {
+      console.log(err, err.stack);
+    } else {
+      console.log("Porteiro desligado com sucesso");
+    }
+  });
 }
+
+// Exportando as funções corretamente
+module.exports = { startEC2Instances, stopEC2Instances };
