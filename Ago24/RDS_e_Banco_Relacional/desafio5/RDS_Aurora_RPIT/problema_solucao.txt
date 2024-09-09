@@ -1,0 +1,184 @@
+Desafio 5 - RDS e Banco Relacional
+
+RDS + Aurora + Clone + RPIT (Restore to Point in Time)	
+
+Parte 1
+
+ - Como implantar um ambiente que sirva de espelho para modificacao da estrutura 
+ do banco.
+ - Caso: um cliente tem milhares de registros e a equipe de dev informa que 
+ precisara modificar a estrutura de um campo do tipo string que aceitava 255 
+ caracteres para 200 caracteres. Como seria a operacao que permitiria esse ajuste
+ no banco de producao?
+
+ Cluster de banco de dados!
+
+ 1 - Criacao do novo banco (no caso, Aurora Postgres, informando o ambiente de 
+ DEV/Test) nas configuracoes da criacao do banco, ja que, em ambientes de
+ homologacao, a estrutura suportada, provavelmente nao aceitara toda a massa
+ de dados.
+
+ 2 - Instancia Burstable (incineravel) - db.t4g.medium 
+
+ 3 - Replicar-se-ia o ambiente de producao dentro da instancia de teste.
+
+ 4 - Foi solicitado ao ChatGPT que gerasse uma instrucao para gerar um arquivo 
+ csv para implementar dentro do Postgres.
+
+ 5 - Conectando-se na maquina de trabalho, dentro da aws:
+ sudo -ec2
+ cd /home/ec2-user/
+ cd bia/
+ nano docker-compose.ynl, fazemos o apontamento para o endpoint do banco
+ docker compose down (caso esteja rodando)
+ docker compose up -d
+
+ rodamos a migrate:
+ criando o banco:
+ docker compose exec server bash -c 'npx sequelize db:create'
+ criando a estrutura:
+ docker compose exec server bash -c 'npx sequelize db:migrate'
+
+ Com o Node instalado na maquina de trabalho, podemos rodar o codigo gerado
+ no ChatGPT para lancar os registros. Entao, criamos um arquivo javascript
+ com o codigo
+
+ nano gerar_csv.js (colamos o codigo)
+
+ apos, rodamos o comando 'node gerar_csv.js' (gerar_csv.js e o nome do arquivo)
+
+ instalando o modulo uuid para gerar o id dos registros do arquivo
+ npm install uuid
+
+ para gerar novos arquivos, repetimos o processo (editando o nome do arquivo).
+
+ Apos a geracao, precisamos fazer a carga no Aurora.
+
+ Parte 2
+ Importando os registro para dentro do banco. Dessa forma, conseguimos
+ fazer a simulacao do problema.
+
+ - Clonar o projeto exemplo-secrets.git para usar o teste do psql e as ferramentas
+ - Copiar as tarefas* para pasta exemplo-secrets que veio do git clone
+ - Editamos o arquivo teste_conexao_psql.sh, alterando as variaveis de host,
+ user e password.
+
+Comando psql para se conectar e executar uma consulta SQL 
+Este comando lera o arquivo teste_conexao_psql vindo do git
+ PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -c "SELECT schema_namw FROM information_schema.schemata"
+Salva e executa
+
+Sera necessario instalar o PostgresSQL15 para executar o comando psql
+ sudo yum install postgresql15
+
+Rodamos o ./tesste_conexao_psql.sh
+Apos o teste de conexao bem sucedido, realizamos a carga dos dados:
+
+psql -d your_database_namw -c "\COPY public.\"Tarefas\" FROM 'tarefas.csv' DELIMITER ',' CSV"
+
+SUBSTITUIMOS UM TRECHO DA INSTRUCAO ANTERIOR
+ PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -c "\COPY public.\"Tarefas\" FROM 'tarefas.csv' DELIMITER ',' CSV"
+
+E necessario fazer a comunicacao via tunel com SSM dessa vez (e nao, com SSH):
+aws ssm start-session --target INSTANCIA --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters  '{"host":["'CLUSTER_BANCO_DADOS'"],"portNumber":["'5432'"],"localPortNumber":["'5434'"]}' --profile NOME_PROFILE
+
+DBEAVER:
+CRIA-SE A CONEXAO COM O BANCO INFORMANDO A PORTA 5434 PARA O LOCALHOST E A
+SENHA DE CONEXAO COM O BANCO.
+
+O script ./teste_conexao_psql.sh ira gerar os registros (um a um) e o DBeaver ira exibi-los
+
+Apos a conexao com o banco dentro do DBeaver, faz-se a query:
+selct count(*)
+from "Tarefas" t
+
+Ate aqui, montamos o escopo para simular o banco de dados existente em producao.
+Iremos simular uma alteracao na COLUNA (estrutura das tabelas do banco)
+
+Dentro da pasta de origem(bia), rodamos o comando 
+npx sequelize migration:genrate --name reduzir-o-tamanho-do-campo
+O comando acima gera um arquivo template para alteracao do campo desejado.
+
+Um codigo do module.exports seria usado para realizar esta alteracao. (min 15:09)
+
+ADICIONAR CODIGO exemplo
+
+E NECESARIO RODAR APONTANDO PARA O BANCO E PODE-SE USAR COM O DOCKER
+
+docker compose build server - para gerar uma nova imagem com as informacoes da
+nova migrate com as alteracoes do codigo para geracao do campo menor
+(DE 255 PARA 100).
+
+docker compose up -d
+
+Quando o container estiver rodando na instancia aws, rodar o seguinte comando:
+docker compose exec server bash -c 'npx sequelize db:migrate'
+
+Devido a alteracao DESTRUTIVA rodando no banco de dados, o banco ficara bloqueado
+e as solicitacoes nao serao atendidas. Isso e um incoveniente para os usuarios,
+gerando um bloqueio em cascata.
+
+SOLUCAO:
+
+CRIAR UMA ESTRUTURA QUE SEJA ESPELHO DO AMBIENTE DE PRODUCAO - O AURORA TEM 
+RECURSOS PARA ATENDER ESSA DEMANDA. - CLONE (AURORA)
+
+CRIA-SE UM CLONE E LIBERA PARA O TIME DE DESENVOLVIMENTO. NUNCA APONTAR A 
+MODIFICACAO PARA A INSTANCIA DE PRODUCAO.
+
+Para um procedimento correto de ajuste de colunas sem gerar gargalos na aplicacao
+faria-se o seguinte:
+
+Estrategia geralmente usada pelo desenvolvedor :
+CRIAR A COLUNA 2
+COPIAR OS DADOS DA COLUNA PARA A COLUNA 2
+COLOCAR O APP PARA APONTAR PARA A COLUNA 2
+COPIAR O QUE ESTA FALTANDO PARA A COLUNA 2
+REMOVER COLUNA 1
+
+Parte 3
+
+APLICANDO A ESTRATEGIA DO CLONE (espelhamento do ambiente de producao):
+
+NA OPCAO ACTIONS DENTRO DO CONSOLE DA AWS, TEMOS A OPCAO DE "CRIAR CLONE"
+Apos a criacao do clone, voltamos para o terminal da instancia ec2, com o 
+endpoint do clone editando o docker compose para apontar para o novo 
+host com a mesma senha do banco original
+
+Derrubamos o container, caso esteja rodando.
+docker compose down -v (-v para eliminar o volume)
+docker compose up -d (para subir novamente)
+
+Rodando a migrate:
+docker compose exec server bash -c 'npx sequelize db:migrate'
+
+Com o banco em producao, o clone do banco ficara disponivel para o time
+de desenvolvimento.
+
+------------
+
+RESTORE TO POINT IN TIME
+
+Caso, acidentalmente, uma table fosse deletada como retorna-la?
+
+Dentro da AWS, em RDS, Actions, existe uma opcao para restaurar:
+RESTORE TO POINT IN TIME
+
+Ele criara uma copia dos dados no momento estabelecido da criacao da restauracao
+
+Usando um endpoint do RPIT, cria-se um outro tunel para verificacao dos dados
+dentro do DBeaver.
+
+aws ssm start-session --target INSTANCIA --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters  '{"host":["'ENDPOINT_BANCO_RPIT'"],"portNumber":["'5432'"],"localPortNumber":["'5435'"]}' --profile NOME_PROFILE
+
+Realizando uma nova consulta sql dentro do DBeaver:
+select count(*)
+from public."Tarefas"
+
+No processo de delecao, faze-se a seguinte sequencia:
+Deleta o CLONE
+Deleta a INSTANICA
+Deleta o RPIT
+depois, deleta o CLUSTER
+
+CLONE E UM RECURSO EXCLUSIVO DO AURORA!
