@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Variáveis de conexão
+DB_HOST="RDS_ENDPOINT"
+DB_PORT="5432"
+DB_NAME="postgres"
+DB_USER='USERNAME'
+DB_PASSWORD='SENHA'
+
+# Comando psql para se conectar e executar uma consulta SQL
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -c "SELECT schema_name FROM information_schema.schemata"
+
+#CRIANDO TUNEL SSM:
+
+
+aws ssm start-session --target i-03309f99cc6476876 --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters  '{"host":["'dbauroradev.cluster-ch6siu6ymoyq.us-east-1.rds.amazonaws.com'"],"portNumber":["'5432'"],"localPortNumber":["'5434'"]}' --profile jason

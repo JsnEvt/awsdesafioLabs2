@@ -1,0 +1,9 @@
+CREATE TABLE public."Tarefas" (
+  "uuid" uuid NOT NULL,
+  titulo varchar(255) NOT NULL,
+  dia_atividade varchar(255) NULL,
+  importante bool DEFAULT false NULL,
+  "createdAt" timestamptz NOT NULL,
+  "updatedAt" timestamptz NOT NULL,
+  CONSTRAINT "Tareffas_pkey" PRIMARY KEY(uuid)
+);
