@@ -1,0 +1,58 @@
+VPC Peering = Realizar a comunicacao entre 2 VPC`s
+
+ - Pode existir um cenario onde um governo, por exemplo, determina que as 
+ informacoes devem estar em servidores nacionais e, nossa aplicacao Pode
+ estar em outra regiao devido a reducao de custos.
+
+ Obs. usar calculadora de custos: calculator.aws
+
+Apos a criacao da nova VPC e as subnets necessarias, prosseguimos criando
+uma VPC nas duas regioes, definimos o router table para que 
+as duas instancias, separadas por regioes, possam se comunicar via peering 
+utilizando o IP PRIVADO de cada uma delas.
+
+Informaremos o Gateway de internet na regiao da Virginia, para que as 
+instancias possam se comunicar via internet
+
+Atachamos a VPC ao internet Gateway.
+
+No Router table, informamos o novo Gateway de internet.
+
+Caso nao haja internet Gateway, nao sera possivel conectar-se as instanciasghoi=
+que estao em outra regiao.
+
+Cria-se as security groups para cada regiao
+
+...
+
+Na tabela de rotas e necessario estabelecer o trafego do IP PRIVADO da
+instancia do outro lado garantindo que a conexao esta sendo estabelecida
+pelo atraves do peering. Sendo assim, e necesario fazer a permissao dentro
+da rota de cada vpc para que a conexao seja bem sucedida.
+
+E necesario configurar o security group para permitir acesso remoto da 
+parte contraria tb.
+
+O QUE ESSE TIPO DE CONEXAO ENVOLVE:
+
+- VPC (devem ter o Range de IP's diferentes)
+- PEERING CONNECTIONS
+- SUBNETS (devem ser criadas e associadas a nova VPC)
+- INTERNET GATEWAY (fornece acesso a internet)
+- ROUTER TABLE (tabela que informa o internet gateway da vpc, a conexao
+peering que permite a entrada do lado oposto a conexao e vpc local(padrao))
+- SECURITY GROUPS (para permitir o acesso ao objeto do lado oposto)
+
+-----
+
+Quando tratamos do RDS, nao conseguimos saber o ip privado da instancia, e sim,
+o public DNS para o ip privado e para que seja resolvido e o trafego possa ser 
+realizado atraves do peering, entao, habilitamos o DNS resolution e o 
+DNS hostnames nas configuracoes da VPC e apos isso, ir em Peering connections 
+e permitir que a VPC resolva o DNS do solicitante para o ip privado.
+
+Allow accepter VPC (vpc-XXX) to resolve DNS of requester VPC (vpc-YYY) hosts
+to private IP.
+
+Isso resolvera a comunicacao do endereco publico para o privado nas duas pontas
+
