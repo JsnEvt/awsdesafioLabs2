@@ -55,4 +55,3 @@ Allow accepter VPC (vpc-XXX) to resolve DNS of requester VPC (vpc-YYY) hosts
 to private IP.
 
 Isso resolvera a comunicacao do endereco publico para o privado nas duas pontas
-
